@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Breakdown Monitor iOS — Modern</title>
+
+  <!-- Enable Tailwind dark mode via class strategy -->
+  <script>
+    window.tailwind = window.tailwind || {};
+    tailwind.config = { darkMode: 'class' };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+    .ios-blur { background-color: rgba(255,255,255,0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+    .hide-scrollbar::-webkit-scrollbar { display:none; } .hide-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+
+    /* small helper for line clamp fallback */
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow:hidden; }
+  </style>
+</head>
+<body class="bg-[#f2f2f7] text-black antialiased pb-28 dark:bg-slate-900 dark:text-slate-200">
+
+  <!-- Top bar with Dark Mode toggle -->
+  <header class="fixed top-0 left-0 right-0 z-50 ios-blur border-b border-slate-200 dark:border-slate-700">
+    <div class="max-w-md mx-auto px-4 py-2 flex items-center justify-between">
+      <div>
+        <h1 class="text-lg font-bold tracking-tight">Breakdown Monitor</h1>
+        <div class="text-xs text-slate-500 dark:text-slate-400">Form pelaporan & log</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btnRefresh" onclick="refreshDatabaseLogs()" title="Refresh" class="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800">
+          🔄
+        </button>
+        <button id="btnToggleDark" onclick="toggleDarkMode()" title="Toggle Dark Mode" class="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800">
+          🌙
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Signal Status Banner -->
+  <div id="signalStatusBanner" class="fixed top-12 left-0 right-0 z-50 text-center text-[11px] font-semibold py-1 transition-all duration-300 ios-blur border-b border-slate-200 text-emerald-600">
+    🟢 Sinyal Terhubung (Mode Online)
+  </div>
+
+  <main class="max-w-md mx-auto pt-28 px-4">
+    <!-- TAB: INPUT FORM -->
+    <section id="tabForm" class="space-y-4">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm space-y-3 border border-slate-100 dark:border-slate-700">
+        <div class="flex justify-between items-start gap-3">
+          <div>
+            <h2 class="text-xl font-extrabold tracking-tight">Input Log</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Form pelaporan breakdown unit lapangan</p>
+          </div>
+        </div>
+
+        <form id="monitoringForm" class="space-y-4" autocomplete="off">
+          <!-- Jobsite (kolom A) -->
+          <div>
+            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Jobsite</label>
+            <input id="jobsite" name="jobsite" type="text" placeholder="Lokasi / Jobsite..." required class="w-full p-3 rounded-xl bg-[#f8f8fb] dark:bg-slate-700 text-sm outline-none border border-slate-200 dark:border-slate-600">
+          </div>
+
+          <!-- Section 1: Informasi Waktu & Driver -->
+          <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm space-y-3 border border-slate-100 dark:border-slate-700">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Informasi Waktu & Driver</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Tanggal</label>
+                <input type="date" name="tanggal" id="tanggal" required class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Shift</label>
+                <select name="shift" required class="w-full p-2.5 bg-white dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600">
+                  <option value="siang">Siang</option>
+                  <option value="malam">Malam</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Jam Masuk</label>
+                <input type="time" name="jamMasuk" class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Jam On Progress</label>
+                <input type="time" name="jamOnProgress" required class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">No Lambung / CN Unit</label>
+              <select id="noLambung" name="noLambung" required class="w-full p-2.5 bg-white dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600">
+                <option value="">Memuat data unit...</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">HM / Oddo</label>
+                <input type="number" step="0.1" name="hmOddo" required class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Nama Driver</label>
+                <input type="text" name="namaDriver" required class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600" placeholder="Driver...">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2 -->
+          <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm space-y-3 border border-slate-100 dark:border-slate-700">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Kerusakan & Mekanik</h3>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Laporan Masalah / Aduan</label>
+              <textarea name="laporan" required rows="2" class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600" placeholder="Ketik aduan driver..."></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Kendala Tambahan</label>
+              <input type="text" name="kendala" class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600" placeholder="-">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Pekerjaan Mekanik</label>
+              <textarea name="pekerjaanMekanik" required rows="2" class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600" placeholder="Tindakan perbaikan..."></textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Mekanik yang Bertugas (Pilih lebih dari 1)</label>
+              <div id="mekanikContainer" class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
+                <div class="text-xs text-slate-400 dark:text-slate-400">Memuat data mekanik...</div>
+              </div>
+              <input type="hidden" name="mekanik" id="mekanikHiddenInput">
+            </div>
+          </div>
+
+          <!-- Section 3: Part -->
+          <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm space-y-3 border border-slate-100 dark:border-slate-700">
+            <div class="flex justify-between items-center">
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Penggantian Part</h3>
+              <button type="button" onclick="tambahBarisPart()" class="text-xs font-semibold text-[#007aff]">+ Tambah Part</button>
+            </div>
+            <div id="partContainer" class="space-y-3"></div>
+          </div>
+
+          <!-- Section 4 -->
+          <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm space-y-3 border border-slate-100 dark:border-slate-700">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Status Akhir Unit</h3>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">STATUS</label>
+              <select name="status" onchange="toggleRfuInputs(this.value)" required class="w-full p-3 bg-white dark:bg-slate-700 font-bold rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600 text-[#ff3b30]">
+                <option value="BD : Breakdown">BD : Breakdown</option>
+                <option value="RFU : Ready For Use">RFU : Ready For Use</option>
+                <option value="GT : Ground Test">GT : Ground Test</option>
+              </select>
+            </div>
+
+            <div id="rfuFormGroup" class="hidden space-y-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Tanggal RFU</label>
+                  <input type="date" name="tanggalRfu" id="tanggalRfu" class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Shift RFU</label>
+                  <select name="shiftRfu" class="w-full p-2.5 bg-white dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600">
+                    <option value="siang">Siang</option>
+                    <option value="malam">Malam</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Jam RFU</label>
+                  <input type="time" name="jamRfu" class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">HM / Odo RFU</label>
+                  <input type="number" step="0.1" name="hmRfu" class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600" placeholder="Opsional">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="space-y-2 pt-2">
+            <button type="button" onclick="submitFormHandler(false)" class="w-full py-3.5 bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-semibold rounded-xl text-sm transition">Simpan Laporan</button>
+            <button type="button" onclick="submitFormHandler(true)" class="w-full py-3.5 bg-[#34c759] hover:bg-emerald-600 text-white font-semibold rounded-xl text-sm shadow-sm transition">Simpan & Kirim WA</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Database Logs -->
+      <div class="pt-6">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-lg font-bold">📋 Data Log Terbaru</h2>
+          <div class="flex items-center gap-2">
+            <button onclick="refreshDatabaseLogs()" class="text-xs font-semibold text-[#007aff] px-3 py-1 hover:bg-slate-50 rounded-lg">🔄 Refresh</button>
+          </div>
+        </div>
+        <div id="logsContainer" class="space-y-3">
+          <div class="text-center py-8 text-sm text-slate-400">Menarik data dari database...</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal: Detail / Edit Log -->
+  <div id="modalDetailLog" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden justify-center items-start z-[100] p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg space-y-4 my-8 border border-slate-100 dark:border-slate-700">
+      <div class="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 p-4 rounded-t-2xl flex justify-between items-center">
+        <h3 id="modalTitle" class="text-base font-bold">Detail Log</h3>
+        <div class="flex items-center gap-2">
+          <button id="btnModalShare" onclick="modalShareWA()" class="text-sm bg-emerald-500 text-white px-3 py-1 rounded-md">Share WA</button>
+          <button id="btnModalEdit" onclick="enterEditMode()" class="text-sm bg-[#007aff] text-white px-3 py-1 rounded-md">Edit</button>
+          <button id="btnModalDelete" onclick="modalDelete()" class="text-sm bg-[#ff3b30] text-white px-3 py-1 rounded-md">Hapus</button>
+          <button type="button" onclick="tutupModalDetail()" class="text-slate-400 text-xl font-bold hover:text-slate-600 dark:hover:text-slate-300">✕</button>
+        </div>
+      </div>
+      <div id="modalDetailContent" class="px-4 space-y-4 pb-6">
+        <!-- Will be populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Master Item -->
+  <div id="modalMasterItem" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden justify-center items-center z-[100] p-4">
+    <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl w-full max-w-sm space-y-4 border border-slate-100 dark:border-slate-700">
+      <h3 class="text-base font-bold text-[#007aff]">Tambah Master Item Baru</h3>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Nama Item / Part</label>
+          <input type="text" id="modalNamaItem" class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Part Number (Part No)</label>
+          <input type="text" id="modalPartNo" class="w-full p-2.5 bg-[#f2f2f7] dark:bg-slate-700 rounded-xl text-sm outline-none border border-slate-200 dark:border-slate-600" placeholder="P/N (Opsional)">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="tutupModal()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl">Batal</button>
+        <button type="button" onclick="simpanMasterItem()" id="btnSimpanMaster" class="px-4 py-2 bg-[#007aff] text-white text-xs font-semibold rounded-xl">Simpan Master</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="iosToast" class="fixed top-28 left-4 right-4 z-50 bg-black/80 text-white rounded-xl p-3 text-sm font-medium hidden shadow-lg items-center gap-3 transition-all">
+    <div id="toastText" class="flex-1">Pesan</div>
+  </div>
+
+  <script>
+    // GLOBAL
+    let globalItemsData = [];
+    let activeInputTarget = null;
+    let isAppOnline = true;
+    let currentModalLog = null; // log object for modal
+    let inEditMode = false;
+
+    // INIT
+    window.addEventListener('load', function() {
+      console.log('App initialized');
+      // restore dark mode
+      if(localStorage.getItem('bd_dark') === '1') document.documentElement.classList.add('dark');
+      checkNetworkStatus();
+      refreshDataMaster();
+      updateOfflineBadges();
+      document.getElementById('tanggal').valueAsDate = new Date();
+      document.getElementById('tanggalRfu').valueAsDate = new Date();
+      refreshDatabaseLogs();
+
+      window.addEventListener('online', () => { setOnlineState(true); syncOfflineDataData(); refreshDatabaseLogs(); });
+      window.addEventListener('offline', () => { setOnlineState(false); });
+    });
+
+    // NETWORK
+    function checkNetworkStatus() { setOnlineState(navigator.onLine); }
+    function setOnlineState(online) {
+      isAppOnline = online;
+      const banner = document.getElementById('signalStatusBanner');
+      if(online) {
+        banner.textContent = "🟢 Sinyal Terhubung (Mode Online)";
+        banner.className = "fixed top-0 left-0 right-0 z-50 text-center text-[11px] font-semibold py-1 transition-all duration-300 ios-blur border-b border-slate-200 text-emerald-600";
+      } else {
+        banner.textContent = "⚠️ Tanpa Sinyal Jaringan (Mode Lokal Aktif)";
+        banner.className = "fixed top-0 left-0 right-0 z-50 text-center text-[11px] font-semibold py-1 transition-all duration-300 ios-blur border-b border-slate-200 text-[#ff9500]";
+      }
+    }
+    function showToast(text) { const toast = document.getElementById('iosToast'); document.getElementById('toastText').textContent = text; toast.classList.remove('hidden'); setTimeout(()=>{ toast.classList.add('hidden'); }, 3500); }
+
+    // DARK MODE
+    function toggleDarkMode() {
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem('bd_dark', document.documentElement.classList.contains('dark') ? '1' : '0');
+    }
+
+    // TAB / UI helpers (kept minimal)
+    function toggleRfuInputs(val) {
+      const group = document.getElementById('rfuFormGroup');
+      if(val.includes('RFU')) { group.classList.remove('hidden'); } else { group.classList.add('hidden'); }
+    }
+
+    // MASTER DATA refresh (units, mekanik, items)
+    function refreshDataMaster() {
+      if (!isAppOnline) { console.log('Offline - skipping refreshDataMaster'); return; }
+      google.script.run
+        .withSuccessHandler(function(data) {
+          if (!data || !data.success) { showToast("⚠️ Gagal memuat data master."); return; }
+          if (data.units && data.units.length > 0) fillSelectElement('noLambung', data.units);
+          if (data.mekaniks && Array.isArray(data.mekaniks)) fillMekanikCheckbox('mekanikContainer', data.mekaniks);
+          else document.getElementById('mekanikContainer').innerHTML = '<div class="text-xs text-slate-400">Data mekanik kosong</div>';
+          globalItemsData = data.items || [];
+          if(document.getElementById('partContainer') && document.getElementById('partContainer').children.length === 0) tambahBarisPart();
+        })
+        .withFailureHandler(function(error) { console.error("Gagal mengambil data master:", error); showToast("Gagal memuat data master."); })
+        .getDropdownData();
+    }
+
+    function fillSelectElement(id, array) {
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.innerHTML = '<option value="">Pilih Unit...</option>';
+      array.forEach(item => { el.innerHTML += `<option value="${item}">${item}</option>`; });
+    }
+
+    function fillMekanikCheckbox(id, array) {
+      const container = document.getElementById(id);
+      if (!container) return;
+      container.innerHTML = '';
+      if (!array || array.length === 0) { container.innerHTML = '<div class="text-xs text-slate-400">Data tidak ditemukan</div>'; return; }
+      array.forEach(nama => {
+        let div = document.createElement('label');
+        div.className = "flex items-center space-x-2 bg-white dark:bg-slate-700 p-2 rounded-lg shadow-sm border border-slate-100 dark:border-slate-600";
+        div.innerHTML = `
+          <input type="checkbox" value="${nama}" onchange="updateMekanikValue()" class="mekanik-checkbox w-4 h-4">
+          <span class="text-xs text-slate-700 dark:text-slate-200">${nama}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function updateMekanikValue() {
+      const checkboxes = document.querySelectorAll('.mekanik-checkbox:checked');
+      const values = Array.from(checkboxes).map(cb => cb.value);
+      document.getElementById('mekanikHiddenInput').value = values.join(', ');
+    }
+
+    // PARTS
+    function tambahBarisPart() {
+      const container = document.getElementById('partContainer'); if (!container) return;
+      const rowId = 'row_' + Date.now();
+      const row = document.createElement('div'); row.id = rowId;
+      row.className = 'part-row bg-[#f2f2f7] dark:bg-slate-700 p-2 rounded-xl border border-slate-200 dark:border-slate-600 relative space-y-2';
+      let html = '<div class="relative">';
+      html += '<input type="text" class="search-input w-full p-2 bg-white dark:bg-slate-800 rounded-lg text-xs outline-none border border-slate-200 dark:border-slate-600" placeholder="Ketik nama part atau part number..." oninput="filterPartSearch(this)" onfocus="filterPartSearch(this)">';
+      html += '<input type="hidden" class="val-nama"><input type="hidden" class="val-partno">';
+      html += '<div class="suggestion-box hidden absolute left-0 right-0 mt-1 bg-white dark:bg-slate-800 border rounded-lg shadow-xl max-h-40 overflow-y-auto z-50 text-xs"></div></div>';
+      html += '<div class="grid grid-cols-5 gap-2 items-center">';
+      html += '<div class="col-span-2 flex items-center gap-1"><span class="text-[10px] font-medium text-slate-500 dark:text-slate-300">Qty:</span><input type="number" class="val-qty w-full p-1.5 bg-white dark:bg-slate-800 rounded-md text-xs border border-slate-200 dark:border-slate-600" required min="1"></div>';
+      html += '<div class="col-span-2 flex items-center gap-1"><span class="text-[10px] font-medium text-slate-500 dark:text-slate-300">Sat:</span><input type="text" list="satuanList" class="val-satuan w-full p-1.5 bg-white dark:bg-slate-800 rounded-md text-xs border border-slate-200 dark:border-slate-600" required placeholder="Ltr/Pcs"></div>';
+      html += '<div class="col-span-1 text-right"><button type="button" onclick="document.getElementById(\\'' + rowId + '\\').remove()" class="text-[#ff3b30] text-xs font-bold px-2 py-1">Hapus</button></div>';
+      html += '</div>';
+      row.innerHTML = html; container.appendChild(row);
+    }
+
+    function filterPartSearch(inputNode) {
+      const parent = inputNode.parentElement;
+      const box = parent.querySelector('.suggestion-box');
+      const keyword = inputNode.value.toLowerCase();
+      box.innerHTML = '';
+      box.classList.remove('hidden');
+
+      if (!globalItemsData) globalItemsData = [];
+      let matches = globalItemsData.filter(i => (i.nama || '').toLowerCase().includes(keyword) || (i.partNo || '').toLowerCase().includes(keyword));
+      if(matches.length > 0) {
+        matches.forEach(item => {
+          let d = document.createElement('div');
+          d.className = 'p-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-100 dark:border-slate-700 flex justify-between items-center';
+          let pnText = item.partNo ? item.partNo : '-';
+          d.innerHTML = '<div><span class="font-bold text-slate-800 dark:text-slate-200">' + item.nama + '</span></div><div class="text-[9px] bg-slate-200 dark:bg-slate-700 px-1 rounded">P/N: ' + pnText + '</div>';
+          d.onclick = function() {
+            inputNode.value = item.nama + (item.partNo ? ' [P/N: ' + item.partNo + ']' : '');
+            parent.querySelector('.val-nama').value = item.nama;
+            parent.querySelector('.val-partno').value = item.partNo;
+            box.classList.add('hidden');
+          };
+          box.appendChild(d);
+        });
+      } else {
+        let div = document.createElement('div'); div.className = 'p-2 text-slate-400 italic'; div.textContent = 'Part tidak ditemukan...'; box.appendChild(div);
+      }
+
+      let btnAdd = document.createElement('div');
+      btnAdd.className = 'p-2 text-[#007aff] font-bold bg-slate-50 dark:bg-slate-700 border-t text-center cursor-pointer';
+      btnAdd.innerHTML = '+ Tambah Master Baru';
+      btnAdd.onclick = function() { activeInputTarget = inputNode; bukaModal(); };
+      box.appendChild(btnAdd);
+    }
+
+    function getRekapPartText() {
+      const rows = document.querySelectorAll('.part-row');
+      let arr = [];
+      rows.forEach(r => {
+        let nama = r.querySelector('.val-nama').value || r.querySelector('.search-input').value;
+        let pn = r.querySelector('.val-partno').value;
+        let qty = r.querySelector('.val-qty').value;
+        let sat = r.querySelector('.val-satuan').value;
+        if(nama && qty) arr.push('- ' + nama + (pn ? ' [P/N: ' + pn + '] ' : ' ') + '(' + qty + ' ' + sat + ')');
+      });
+      return arr.join('\n');
+    }
+
+    // MASTER ITEM modal
+    function bukaModal() { document.getElementById('modalMasterItem').classList.replace('hidden', 'flex'); }
+    function tutupModal() { document.getElementById('modalMasterItem').classList.replace('flex', 'hidden'); document.getElementById('modalNamaItem').value=''; document.getElementById('modalPartNo').value=''; }
+
+    function simpanMasterItem() {
+      const nama = document.getElementById('modalNamaItem').value.trim();
+      const pn = document.getElementById('modalPartNo').value.trim();
+      if(!nama) { showToast("Nama item tidak boleh kosong!"); return; }
+      if(!isAppOnline) { showToast("Anda sedang offline!"); return; }
+      document.getElementById('btnSimpanMaster').disabled = true;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('btnSimpanMaster').disabled = false;
+          if(res === "Sukses") {
+            tutupModal(); showToast("Master Item Baru Tersimpan!");
+            if(activeInputTarget) {
+              const p = activeInputTarget.parentElement;
+              activeInputTarget.value = nama + (pn ? ' [P/N: ' + pn + ']' : '');
+              p.querySelector('.val-nama').value = nama;
+              p.querySelector('.val-partno').value = pn;
+              p.querySelector('.suggestion-box').classList.add('hidden');
+            }
+            refreshDataMaster();
+          } else { showToast("Gagal: " + res); }
+        })
+        .withFailureHandler(function(error) { document.getElementById('btnSimpanMaster').disabled = false; console.error("Error:", error); showToast("Gagal menyimpan master item."); })
+        .addMasterItem(nama, pn);
+    }
+
+    // FORM SUBMIT
+    function submitFormHandler(shouldShareWA) {
+      const form = document.getElementById('monitoringForm');
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+      const fd = new FormData(form); const dataObj = {};
+      fd.forEach((v,k)=>{ dataObj[k]=v; });
+      dataObj.listPartDiganti = getRekapPartText();
+      dataObj.isWA = shouldShareWA;
+
+      if (!isAppOnline) { saveToLocalStorage(dataObj); resetForm(); return; }
+
+      showToast("Mengirim ke database...");
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if(response === "Sukses") {
+            showToast("✅ Tersimpan di database!");
+            if(shouldShareWA) executeWhatsAppOpen(dataObj);
+            resetForm(); refreshDatabaseLogs();
+          } else { console.error('Submit error:', response); saveToLocalStorage(dataObj); }
+        })
+        .withFailureHandler(function(error) { console.error("Submit error:", error); showToast("Gagal! Data disimpan offline."); saveToLocalStorage(dataObj); })
+        .submitForm(dataObj);
+    }
+
+    function resetForm() {
+      document.getElementById('monitoringForm').reset();
+      document.getElementById('partContainer').innerHTML = '';
+      tambahBarisPart();
+      document.getElementById('tanggal').valueAsDate = new Date();
+      document.getElementById('tanggalRfu').valueAsDate = new Date();
+    }
+
+    // OFFLINE QUEUE (localStorage)
+    function saveToLocalStorage(dataObj) {
+      let queue = JSON.parse(localStorage.getItem('breakdown_offline_queue')) || [];
+      queue.push(dataObj);
+      localStorage.setItem('breakdown_offline_queue', JSON.stringify(queue));
+      updateOfflineBadges();
+      showToast("⚠️ Offline! Data tersimpan di HP.");
+    }
+    function updateOfflineBadges() {
+      let queue = JSON.parse(localStorage.getItem('breakdown_offline_queue')) || [];
+      const count = queue.length;
+      const badgeCount = document.getElementById('offlineCountBadge');
+      if(badgeCount) badgeCount.textContent = count;
+      const badgeCircle = document.getElementById('badgeCountCircle');
+      if(badgeCircle) {
+        if(count>0) { badgeCircle.textContent = count; badgeCircle.classList.replace('hidden','flex'); } else { try{ badgeCircle.classList.replace('flex','hidden'); }catch(e){} }
+      }
+      renderOfflineItemsList(queue);
+    }
+    function renderOfflineItemsList(queue) {
+      const wrapper = document.getElementById('offlineItemsList');
+      if(!wrapper) return;
+      wrapper.innerHTML = '';
+      if(queue.length===0) { wrapper.innerHTML = '<div class="text-center text-xs text-slate-400 py-4">Tidak ada antrean log.</div>'; return; }
+      queue.forEach((item, index) => {
+        let div = document.createElement('div');
+        div.className = 'bg-white dark:bg-slate-800 rounded-xl p-3 text-xs border border-slate-200 dark:border-slate-700 shadow-sm flex justify-between items-center';
+        let statusDisplay = item.status ? item.status.split(' ')[0] : 'BD';
+        div.innerHTML = '<div><div class="font-bold text-slate-800 dark:text-slate-200">' + (item.noLambung||'-') + ' (' + statusDisplay + ')</div><div class="text-slate-400 dark:text-slate-400 text-[10px]">' + (item.tanggal||'-') + ' | ' + (item.namaDriver||'-') + '</div></div><button onclick="hapusQueueIndex(' + index + ')" class="text-[#ff3b30] font-medium">Batal</button>';
+        wrapper.appendChild(div);
+      });
+    }
+    function hapusQueueIndex(idx) {
+      let queue = JSON.parse(localStorage.getItem('breakdown_offline_queue')) || [];
+      queue.splice(idx,1);
+      localStorage.setItem('breakdown_offline_queue', JSON.stringify(queue));
+      updateOfflineBadges();
+    }
+    function syncOfflineDataData() {
+      let queue = JSON.parse(localStorage.getItem('breakdown_offline_queue')) || [];
+      if(queue.length===0 || !isAppOnline) return;
+      showToast("🔄 Sinkronisasi " + queue.length + " log lokal...");
+      let itemToSend = queue[0];
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if(res === "Sukses") {
+            if(itemToSend.isWA) executeWhatsAppOpen(itemToSend);
+            queue.shift(); localStorage.setItem('breakdown_offline_queue', JSON.stringify(queue)); updateOfflineBadges();
+            if(queue.length>0) syncOfflineDataData(); else showToast("✅ Semua log sukses diunggah!");
+          }
+        })
+        .withFailureHandler(function(error) { showToast("❌ Gagal Sinkron"); })
+        .submitForm(itemToSend);
+    }
+
+    // DATABASE LOGS
+    function refreshDatabaseLogs() {
+      if(!isAppOnline) { document.getElementById('logsContainer').innerHTML = '<div class="text-center py-4 text-xs text-[#ff9500] font-medium">⚠️ Anda harus online untuk memuat data.</div>'; return; }
+      document.getElementById('logsContainer').innerHTML = '<div class="text-center py-8 text-xs text-slate-400">Menarik data dari server...</div>';
+      google.script.run
+        .withSuccessHandler(function(logs) { renderDatabaseLogs(logs || []); })
+        .withFailureHandler(function(error) { console.error("Gagal ambil data:", error); document.getElementById('logsContainer').innerHTML = '<div class="text-center py-6 text-xs text-red-500 font-medium">⚠️ Error: Gagal memuat data</div>'; })
+        .getDatabaseLogs();
+    }
+
+    function renderDatabaseLogs(logs) {
+      const container = document.getElementById('logsContainer'); container.innerHTML = '';
+      if(!logs || logs.length===0) { container.innerHTML = '<div class="text-center text-xs text-slate-400 py-8">Belum ada data log di database.</div>'; return; }
+      logs.slice().reverse().forEach(log => {
+        // Expect log contains id, jobsite, noLambung, tanggal, shift, laporan, mekanik, status, listPartDiganti, etc.
+        let isRfu = log.status && log.status.includes('RFU');
+        let card = document.createElement('div');
+        card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-3 shadow-sm border border-slate-100 dark:border-slate-700 cursor-pointer hover:shadow-md transition';
+        card.onclick = function(e) {
+          // avoid triggering when clicking action buttons inside card
+          if(e.target.closest('.card-action')) return;
+          bukaModalDetail(log);
+        };
+
+        let statusBadge = isRfu ? '<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#e8f5e9] text-[#34c759]">RFU</span>' : '<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#ffebee] text-[#ff3b30]">BD</span>';
+
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-extrabold text-slate-900 dark:text-slate-100">${log.noLambung || '-'}</span>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400">${log.jobsite ? ('• ' + log.jobsite) : ''}</span>
+              </div>
+              <span class="text-[10px] text-slate-400 dark:text-slate-400 block">${log.tanggal || '-'} | ${log.shift || '-'}</span>
+            </div>
+            ${statusBadge}
+          </div>
+          <div class="text-xs text-slate-600 dark:text-slate-300 mt-2 line-clamp-2">${log.laporan || '-'}</div>
+          <div class="text-[9px] text-slate-400 dark:text-slate-400 mt-2 flex justify-between items-center">
+            <div>Mekanik: ${log.mekanik || '-'}</div>
+            <div class="flex gap-2">
+              <button onclick="openEditFromCard(event, '${log.id || ''}')" class="card-action text-[10px] px-2 py-1 bg-[#007aff] text-white rounded-md">Edit</button>
+              <button onclick="deleteFromCard(event, '${log.id || ''}')" class="card-action text-[10px] px-2 py-1 bg-[#ff3b30] text-white rounded-md">Hapus</button>
+              <button onclick="shareFromCard(event, '${log.id || ''}')" class="card-action text-[10px] px-2 py-1 bg-emerald-500 text-white rounded-md">Share WA</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Card actions (prevent bubbling)
+    function openEditFromCard(e, id) { e.stopPropagation(); // fetch log by id from server (or from last loaded logs)
+      // For simplicity call server to get specific log; assuming getLogById exists.
+      if(!id) { showToast("ID tidak ditemukan"); return; }
+      google.script.run.withSuccessHandler(function(log){ bukaModalDetail(log); enterEditMode(); }).withFailureHandler(()=>showToast("Gagal ambil data log")).getLogById(id);
+    }
+    function deleteFromCard(e, id) { e.stopPropagation(); if(!id) { showToast("ID tidak ditemukan"); return; } if(!confirm('Hapus log ini?')) return;
+      google.script.run.withSuccessHandler(function(res){ if(res==='Sukses'){ showToast('Terhapus'); refreshDatabaseLogs(); tutupModalDetail(); } else showToast('Gagal: '+res); }).withFailureHandler(()=>showToast('Gagal hapus')).deleteLog(id);
+    }
+    function shareFromCard(e, id) { e.stopPropagation(); if(!id){ showToast('ID tidak ditemukan'); return; } google.script.run.withSuccessHandler(function(log){ executeWhatsAppOpen(log); }).withFailureHandler(()=>showToast('Gagal ambil data untuk share')).getLogById(id); }
+
+    // Modal open/detail
+    function bukaModalDetail(log) {
+      currentModalLog = log || null;
+      inEditMode = false;
+      const content = document.getElementById('modalDetailContent');
+      let isRfu = log.status && log.status.includes('RFU');
+      let statusBadge = isRfu ? '<span class="px-3 py-1 rounded-full text-[10px] font-bold bg-[#e8f5e9] text-[#34c759]">Ready For Use</span>' : '<span class="px-3 py-1 rounded-full text-[10px] font-bold bg-[#ffebee] text-[#ff3b30]">Breakdown</span>';
+      let partHtml = '';
+      if(log.listPartDiganti && log.listPartDiganti.trim() !== '') {
+        partHtml = `<div class="border-t border-slate-100 dark:border-slate-700 pt-3"><span class="font-semibold text-slate-600 dark:text-slate-300 text-[11px] uppercase block mb-2">Part Diganti:</span><pre class="font-sans text-[11px] whitespace-pre-wrap text-slate-600 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 p-2 rounded-lg">${log.listPartDiganti}</pre></div>`;
+      }
+      content.innerHTML = `
+        <div class="space-y-3">
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="text-lg font-extrabold text-slate-900 dark:text-slate-100">${log.noLambung || '-'}</span>
+              <div class="text-[11px] text-slate-400 dark:text-slate-400">${log.tanggal || '-'} | Shift ${log.shift || '-'}</div>
+              <div class="text-[11px] mt-1 text-slate-500 dark:text-slate-400">Jobsite: <span class="font-semibold text-slate-800 dark:text-slate-200">${log.jobsite || '-'}</span></div>
+            </div>
+            ${statusBadge}
+          </div>
+
+          <div class="border-t border-slate-100 dark:border-slate-700 pt-3 space-y-2">
+            <div><span class="font-semibold text-slate-600 dark:text-slate-300 text-[11px] uppercase block">Jam Masuk - On Progress</span><span class="text-sm text-slate-800 dark:text-slate-200">${log.jamMasuk || '-'} s/d ${log.jamOnProgress || '-'}</span></div>
+            <div><span class="font-semibold text-slate-600 dark:text-slate-300 text-[11px] uppercase block">HM / Oddo</span><span class="text-sm text-slate-800 dark:text-slate-200">${log.hmOddo || '-'}</span></div>
+            <div><span class="font-semibold text-slate-600 dark:text-slate-300 text-[11px] uppercase block">Driver</span><span class="text-sm text-slate-800 dark:text-slate-200">${log.namaDriver || '-'}</span></div>
+          </div>
+
+          <div class="border-t border-slate-100 dark:border-slate-700 pt-3 space-y-2">
+            <div><span class="font-semibold text-slate-600 dark:text-slate-300 text-[11px] uppercase block">Aduan / Masalah</span><span class="text-sm text-slate-700 dark:text-slate-200">${log.laporan || '-'}</span></div>
+            <div><span class="font-semibold text-slate-600 dark:text-slate-300 text-[11px] uppercase block">Kendala Tambahan</span><span class="text-sm text-slate-700 dark:text-slate-200">${log.kendala || '-'}</span></div>
+          </div>
+
+          <div class="border-t border-slate-100 dark:border-slate-700 pt-3 space-y-2">
+            <div><span class="font-semibold text-slate-600 dark:text-slate-300 text-[11px] uppercase block">Pekerjaan Mekanik</span><span class="text-sm text-slate-700 dark:text-slate-200">${log.pekerjaanMekanik || '-'}</span></div>
+            <div><span class="font-semibold text-slate-600 dark:text-slate-300 text-[11px] uppercase block">Mekanik Utama</span><span class="text-sm text-slate-800 dark:text-slate-200">${log.mekanik || '-'}</span></div>
+          </div>
+
+          ${partHtml}
+
+          ${log.tanggalRfu ? `
+            <div class="border-t border-slate-100 dark:border-slate-700 pt-3 space-y-2 bg-[#e8f5e9] dark:bg-slate-800 p-2 rounded-lg">
+              <span class="font-semibold text-[#34c759] text-[11px] uppercase block">Status RFU</span>
+              <div class="text-sm space-y-1">
+                <div class="text-slate-700 dark:text-slate-200">Tanggal: <span class="font-semibold">${log.tanggalRfu || '-'}</span></div>
+                <div class="text-slate-700 dark:text-slate-200">Shift: <span class="font-semibold">${log.shiftRfu || '-'}</span></div>
+                <div class="text-slate-700 dark:text-slate-200">Jam: <span class="font-semibold">${log.jamRfu || '-'} WIB</span></div>
+                <div class="text-slate-700 dark:text-slate-200">HM/Oddo: <span class="font-semibold">${log.hmRfu || '-'}</span></div>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      // set up modal action buttons data
+      document.getElementById('btnModalShare').onclick = function(){ executeWhatsAppOpen(currentModalLog); };
+      document.getElementById('btnModalDelete').onclick = function(){ modalDelete(); };
+      document.getElementById('btnModalEdit').onclick = function(){ enterEditMode(); };
+      document.getElementById('modalDetailLog').classList.replace('hidden','flex');
+    }
+
+    function tutupModalDetail() {
+      document.getElementById('modalDetailLog').classList.replace('flex','hidden');
+      currentModalLog = null; inEditMode = false;
+    }
+
+    // Modal actions: delete
+    function modalDelete() {
+      if(!currentModalLog || !currentModalLog.id) { showToast('Tidak ada log terpilih'); return; }
+      if(!confirm('Hapus log ini?')) return;
+      google.script.run.withSuccessHandler(function(res){ if(res==='Sukses'){ showToast('Terhapus'); refreshDatabaseLogs(); tutupModalDetail(); } else showToast('Gagal: '+res); }).withFailureHandler(()=>showToast('Gagal hapus')).deleteLog(currentModalLog.id);
+    }
+
+    // Enter edit mode: replace modal content with a simple editable form
+    function enterEditMode() {
+      if(!currentModalLog) return;
+      inEditMode = true;
+      const content = document.getElementById('modalDetailContent');
+      // simple editable form with relevant fields
+      content.innerHTML = `
+        <form id="editLogForm" class="space-y-3">
+          <div><label class="text-xs text-slate-500">Jobsite</label><input name="jobsite" class="w-full p-2 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800" value="${escapeHtml(currentModalLog.jobsite||'')}"></div>
+          <div class="grid grid-cols-2 gap-2"><div><label class="text-xs text-slate-500">Tanggal</label><input name="tanggal" type="date" value="${currentModalLog.tanggal||''}" class="w-full p-2 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800"></div><div><label class="text-xs text-slate-500">Shift</label><input name="shift" class="w-full p-2 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800" value="${escapeHtml(currentModalLog.shift||'')}"></div></div>
+          <div><label class="text-xs text-slate-500">No Lambung</label><input name="noLambung" class="w-full p-2 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800" value="${escapeHtml(currentModalLog.noLambung||'')}"></div>
+          <div><label class="text-xs text-slate-500">Driver</label><input name="namaDriver" class="w-full p-2 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800" value="${escapeHtml(currentModalLog.namaDriver||'')}"></div>
+          <div><label class="text-xs text-slate-500">Laporan</label><textarea name="laporan" class="w-full p-2 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800">${escapeHtml(currentModalLog.laporan||'')}</textarea></div>
+          <div><label class="text-xs text-slate-500">Mekanik</label><input name="mekanik" class="w-full p-2 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800" value="${escapeHtml(currentModalLog.mekanik||'')}"></div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="renderModalView()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-md">Batal</button>
+            <button type="button" onclick="saveModalEdit()" class="px-4 py-2 bg-[#007aff] text-white rounded-md">Simpan</button>
+          </div>
+        </form>
+      `;
+    }
+
+    function renderModalView() { if(!currentModalLog) return; bukaModalDetail(currentModalLog); }
+
+    function saveModalEdit() {
+      const form = document.getElementById('editLogForm');
+      const fd = new FormData(form);
+      const newData = {};
+      fd.forEach((v,k)=> newData[k]=v);
+      if(!currentModalLog || !currentModalLog.id) { showToast('ID tidak ada'); return; }
+      // call server to update
+      google.script.run
+        .withSuccessHandler(function(res){ if(res==='Sukses'){ showToast('Tersimpan'); refreshDatabaseLogs(); google.script.run.withSuccessHandler(function(l){ bukaModalDetail(l); }).getLogById(currentModalLog.id); } else showToast('Gagal: '+res); })
+        .withFailureHandler(function(){ showToast('Gagal simpan'); })
+        .updateLog(currentModalLog.id, newData);
+    }
+
+    // helper escape
+    function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+
+    // WHATSAPP
+    function executeWhatsAppOpen(data) {
+      const opt = { year: 'numeric', month: 'long', day: 'numeric' };
+      const tglFormated = data.tanggal ? new Date(data.tanggal).toLocaleDateString('id-ID', opt) : '-';
+      const tglRfuFormated = data.tanggalRfu ? new Date(data.tanggalRfu).toLocaleDateString('id-ID', opt) : '-';
+      const teksWA = `Breakdown Monitor Report\n\nJobsite: ${data.jobsite||'-'}\nTanggal: ${tglFormated}\nJam Masuk: ${data.jamMasuk||'-'} WIB\nJam On Progres: ${data.jamOnProgress||'-'} WIB\nShift: ${data.shift||'-'}\nNo Lambung/CN: ${data.noLambung||'-'}\nHM/Oddo: ${data.hmOddo||'-'}\nDriver: ${ (data.namaDriver||'-').toString().toUpperCase() }\n\nLaporan/Aduan\n${data.laporan||'-'}\n\nKendala\n${data.kendala||'-'}\n\nPekerjaan Mekanik\n${data.pekerjaanMekanik||'-'}\n\nMekanik: ${data.mekanik||'-'}\n\nPart Diganti\n${data.listPartDiganti||'-'}\n\nSTATUS\n${data.status||'-'}\n\nRFU Info\nTanggal: ${tglRfuFormated}\nShift: ${data.shiftRfu||'-'}\nJam: ${data.jamRfu||'-'} WIB\nHM/Oddo: ${data.hmRfu||'-'}`;
+      const urlWA = "https://api.whatsapp.com/send?text=" + encodeURIComponent(teksWA);
+      window.open(urlWA, '_blank');
+    }
+
+    // wrapper for modal share
+    function modalShareWA(){ if(currentModalLog) executeWhatsAppOpen(currentModalLog); }
+
+    // Extra server helpers for cards: getLogById, deleteLog, updateLog assumed on server
+
+  </script>
+
+  <!-- Datalist Satuan -->
+  <datalist id="satuanList">
+    <option value="Pcs"><option value="Liter"><option value="Btl"><option value="Set"><option value="Kg"><option value="Meter">
+  </datalist>
+</body>
+</html>
